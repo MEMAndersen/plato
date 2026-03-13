@@ -63,7 +63,9 @@ fn render_svg(mesh: &MeshModel) -> String {
     let _ = writeln!(buf, "<rect width=\"{W}\" height=\"{H}\" fill=\"#1a1c22\"/>");
 
     // ── Wireframe triangles ───────────────────────────────────────────────
-    buf.push_str("<g stroke=\"#4a9eff\" stroke-width=\"0.8\" fill=\"#1e2a3a\" fill-opacity=\"0.5\">\n");
+    buf.push_str(
+        "<g stroke=\"#4a9eff\" stroke-width=\"0.8\" fill=\"#1e2a3a\" fill-opacity=\"0.5\">\n",
+    );
     for el in &mesh.elements {
         let pts: String = el
             .corners

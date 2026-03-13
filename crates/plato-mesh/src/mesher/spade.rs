@@ -171,8 +171,12 @@ impl Mesher for SpadeMesher {
         // for fine meshes. We estimate an upper bound from the bounding-box area and
         // the requested element area, then add a generous safety factor of 4×.
         let bbox_area = {
-            let (mut xmin, mut xmax, mut ymin, mut ymax) =
-                (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
+            let (mut xmin, mut xmax, mut ymin, mut ymax) = (
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+            );
             for &[x, y] in &nodes {
                 xmin = xmin.min(x);
                 xmax = xmax.max(x);

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+plato-mesh = { path = "../plato-mesh" }
 clarabel   = "0.10"
 nalgebra   = "0.33"
 faer       = "0.21"

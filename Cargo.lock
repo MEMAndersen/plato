@@ -1127,6 +1127,7 @@ dependencies = [
  "criterion",
  "faer",
  "nalgebra",
+ "plato-mesh",
  "proptest",
  "serde",
  "thiserror 2.0.18",
