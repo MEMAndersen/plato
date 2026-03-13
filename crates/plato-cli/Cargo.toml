@@ -1,0 +1,11 @@
+[package]
+name    = "plato-cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "plato"
+path = "src/main.rs"
+
+[dependencies]
+plato-api = { path = "../plato-api" }

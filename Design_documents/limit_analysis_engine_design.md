@@ -1,7 +1,7 @@
 # PLATO — Plate Limit Analysis TOol: Design & Implementation Specification
 
 **Scope:** Numerical lower-bound plastic limit analysis of reinforced concrete plates (pure bending, no in-plane action)
-**Language:** Rust (2021 edition)
+**Language:** Rust
 **Solver:** Clarabel (native Rust SOCP)
 **Mesh:** Spade (pure Rust constrained Delaunay triangulation)
 **Version:** v1.1 — Draft, March 2026

@@ -1,0 +1,12 @@
+[package]
+name    = "plato-mesh"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+spade     = "2"
+serde     = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+approx = "0.5"

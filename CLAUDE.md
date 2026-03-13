@@ -26,7 +26,7 @@ plato/
 
 | Concern | Choice |
 |---------|--------|
-| Language | Rust 2021 |
+| Language | Rust 2024 edition (stabilized Feb 2025 with Rust 1.85) |
 | Solver | Clarabel (native Rust SOCP) |
 | Mesh | Spade (constrained Delaunay + Ruppert refinement) |
 | GUI framework | egui + eframe |
@@ -57,3 +57,6 @@ The GUI design document describes the planned `plato-gui` crate in detail. Key p
 - Colours carry semantic meaning: green = correct/success, amber = loads/warnings, red = errors, purple = BCs
 - Shared edges shown green (geometrically matched) or red (mismatched) in the viewport
 - Internal storage always in base SI units; `UnitSystem` controls input/output conversion
+
+# Notes
+- Add a suggestion for a commit message. Should be written in the past tense, i.e., use Added, instead of Add - Fixed, instead of fix.

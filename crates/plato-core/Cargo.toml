@@ -1,0 +1,24 @@
+[package]
+name    = "plato-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clarabel   = "0.10"
+nalgebra   = "0.33"
+faer       = "0.21"
+serde      = { workspace = true }
+thiserror  = { workspace = true }
+tracing    = { workspace = true }
+
+[dev-dependencies]
+approx   = "0.5"
+proptest = "1"
+
+[[bench]]
+name    = "assembly"
+harness = false
+
+[dev-dependencies.criterion]
+version  = "0.5"
+features = ["html_reports"]
