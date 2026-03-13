@@ -3,7 +3,7 @@
 **Version:** 0.2-draft  
 **Status:** Proposal  
 **Language:** Rust  
-**Scope:** Native desktop GUI crate (`plato-gui`) integrated into the existing `limit-analysis` workspace
+**Scope:** Native desktop GUI crate (`plato-gui`) integrated into the existing `plato` workspace
 
 ---
 
@@ -11,7 +11,7 @@
 
 This document describes the architecture, library choices, layout, and implementation plan for the `plato-gui` crate. The GUI provides pre-processing (model definition and mesh preview), solver control with live progress, and post-processing (moment field contours and collapse mode visualisation) for the RC plate limit analysis engine.
 
-The GUI crate is added directly to the existing `limit-analysis` Cargo workspace and links against `la-api` in-process — no IPC, no serialisation round-trip at runtime. Communication between GUI and engine happens via direct Rust function calls and the `ProgressCallback` trait already defined in `la-api`.
+The GUI crate is added directly to the existing `plato` Cargo workspace and links against `plato-api` in-process — no IPC, no serialisation round-trip at runtime. Communication between GUI and engine happens via direct Rust function calls and the `ProgressCallback` trait already defined in `plato-api`.
 
 ---
 
@@ -20,18 +20,18 @@ The GUI crate is added directly to the existing `limit-analysis` Cargo workspace
 The new crate slots into the existing workspace without modifying any existing crates:
 
 ```
-limit-analysis/
+plato/
 ├── Cargo.toml                  # workspace — add "crates/plato-gui" to members
 ├── crates/
-│   ├── la-core/                # unchanged
-│   ├── la-mesh/                # unchanged
-│   ├── la-api/                 # unchanged — plato-gui depends on this
-│   ├── la-cli/                 # unchanged
+│   ├── plato-core/                # unchanged
+│   ├── plato-mesh/                # unchanged
+│   ├── plato-api/                 # unchanged — plato-gui depends on this
+│   ├── plato-cli/                 # unchanged
 │   └── plato-gui/                 # NEW
 │       ├── Cargo.toml
 │       └── src/
 │           ├── main.rs         # eframe::run_native() entry point
-│           ├── app.rs          # LimitAnalysisApp — top-level eframe::App impl
+│           ├── app.rs          # PlatoApp — top-level eframe::App impl
 │           ├── model_state.rs  # Owned AnalysisModel + dirty tracking + undo stack
 │           ├── solver_state.rs # Solver thread handle, ProgressEvent receiver
 │           ├── panels/
@@ -54,8 +54,8 @@ Dependency in `crates/plato-gui/Cargo.toml`:
 
 ```toml
 [dependencies]
-la-api  = { path = "../la-api" }
-la-mesh = { path = "../la-mesh" }   # for MeshModel types in renderer
+plato-api  = { path = "../plato-api" }
+plato-mesh = { path = "../plato-mesh" }   # for MeshModel types in renderer
 ```
 
 ---
@@ -114,7 +114,7 @@ egui_plot = "0.29"
 
 ### 3.4 Concurrency — std::thread + std::sync::mpsc
 
-The solver runs on a background `std::thread`. Progress events stream back to the GUI via `std::sync::mpsc` channels, polled each frame in egui's `update()` loop. This maps directly onto the `ProgressCallback` trait already in `la-api` — no async runtime required.
+The solver runs on a background `std::thread`. Progress events stream back to the GUI via `std::sync::mpsc` channels, polled each frame in egui's `update()` loop. This maps directly onto the `ProgressCallback` trait already in `plato-api` — no async runtime required.
 
 ### 3.5 Serialisation
 
@@ -125,8 +125,8 @@ Project save/load uses `serde_json` on `AnalysisModel`, which is already fully `
 ```toml
 [dependencies]
 # Engine
-la-api       = { path = "../la-api" }
-la-mesh      = { path = "../la-mesh" }
+plato-api       = { path = "../plato-api" }
+plato-mesh      = { path = "../plato-mesh" }
 
 # GUI
 egui         = "0.29"
@@ -152,10 +152,10 @@ rfd          = "0.14"   # native OS file open/save dialogs
 
 ## 4. Application State Design
 
-The top-level `LimitAnalysisApp` struct owns all application state. In egui's immediate-mode model, this struct is mutated by UI code each frame and its fields drive what gets rendered.
+The top-level `PlatoApp` struct owns all application state. In egui's immediate-mode model, this struct is mutated by UI code each frame and its fields drive what gets rendered.
 
 ```rust
-pub struct LimitAnalysisApp {
+pub struct PlatoApp {
     model_state:  ModelState,
     solver_state: SolverState,
     viewport:     Viewport,
@@ -248,7 +248,7 @@ All panels are resizable via egui splitters. The central viewport fills the rema
 [ New ] [ Open ] [ Save ]  ─  [ Preview Mesh ] [ ▶ Run ] [ ■ Stop ]  ─  [ Top ] [ ISO ] [ Reset ]
 ```
 
-- **Preview Mesh** — calls `la-mesh` directly, displays `MeshModel` without solving
+- **Preview Mesh** — calls `plato-mesh` directly, displays `MeshModel` without solving
 - **▶ Run** — spawns solver thread, transitions to `SolverStatus::Solving`
 - **■ Stop** — sends cancellation signal to solver thread (see Open Questions §10.3)
 
@@ -336,7 +336,7 @@ Followed by the `egui_plot` convergence chart (duality gap vs. iteration, log Y 
 ```rust
 // In plato-gui/src/solver_state.rs
 use std::sync::mpsc;
-use la_api::{run_analysis, ProgressCallback, ProgressEvent, AnalysisModel};
+use plato_api::{run_analysis, ProgressCallback, ProgressEvent, AnalysisModel};
 
 struct ChannelProgress(mpsc::Sender<ProgressEvent>);
 
@@ -354,7 +354,7 @@ impl SolverState {
 
         self.thread_handle = Some(std::thread::spawn(move || {
             let cb = ChannelProgress(tx);
-            // run_analysis is the existing la-api entry point
+            // run_analysis is the existing plato-api entry point
             let _ = run_analysis(&model, cb);
         }));
     }
@@ -544,7 +544,7 @@ The design deliberately uses colour sparingly so that colour always carries mean
 `eframe` window with all five panel slots, placeholder content, camera orbit/zoom/pan, wgpu pipeline initialised and drawing a test triangle.
 
 **Phase 2 — Mesh preview**  
-Load a hardcoded `AnalysisModel`, call `la-mesh` for `MeshModel`, upload to GPU, render wireframe + filled faces, clickable face highlights parent panel.
+Load a hardcoded `AnalysisModel`, call `plato-mesh` for `MeshModel`, upload to GPU, render wireframe + filled faces, clickable face highlights parent panel.
 
 **Phase 3 — Model tree and properties editor**  
 Model tree populated from `AnalysisModel`, right panel properties editing for all entity types, undo/redo stack via `AnalysisModel` snapshots, `is_dirty` flag driving the title bar.
@@ -569,6 +569,6 @@ BC and load glyphs, material dialog with schematic cross-section preview, keyboa
 
 2. **Shared edge visualisation** — declared `SharedEdge` connections are rendered as a coloured line drawn between the two shared edge midpoints (or along the shared edge itself). If the edge pairing is geometrically inconsistent (midpoints do not coincide within a tolerance), the line is drawn in red as a warning; a correctly matched shared edge is drawn in green. This makes misconfigured continuity immediately apparent before the user runs the solver.
 
-3. **Cancellation token** — `ProgressCallback::on_event()` will return a `ControlFlow` enum (`Continue` / `Cancel`). The solver checks the return value at each iteration boundary. This addition to `la-api` is required before Phase 4 of the GUI implementation.
+3. **Cancellation token** — `ProgressCallback::on_event()` will return a `ControlFlow` enum (`Continue` / `Cancel`). The solver checks the return value at each iteration boundary. This addition to `plato-api` is required before Phase 4 of the GUI implementation.
 
 4. **Colourmap** — `RdBu` (red = positive/sagging, blue = negative/hogging) with the range automatically centred on zero and symmetric (`max(|min|, |max|)` on both sides). This matches standard structural engineering convention for bending moment diagrams.
