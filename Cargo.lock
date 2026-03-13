@@ -1139,6 +1139,7 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "serde",
+ "serde_json",
  "spade",
  "thiserror 2.0.18",
 ]
