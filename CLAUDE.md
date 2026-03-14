@@ -60,3 +60,4 @@ The GUI design document describes the planned `plato-gui` crate in detail. Key p
 
 # Notes
 - Add a suggestion for a commit message. Should be written in the past tense, i.e., use Added, instead of Add - Fixed, instead of fix.
+- This is an alpha software in development. We do not need to consider backwards compatibility if we can improve a workflow or a data structure

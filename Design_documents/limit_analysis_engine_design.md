@@ -1327,10 +1327,8 @@ Variables:         1  +  21·N_e       (λ + moments + α auxiliaries; t/s are n
 - Global CSC assembly (triplet collection → sort → CSC)
 
 ### Phase 3 — Johansen Criterion and Clarabel Integration (`plato-core`)
-- `JohansenCriterion::cone_blocks()`: nonneg + affine SOC blocks per corner, per element
+- `JohansenCriterion::push_corner_blocks()`: nonneg + affine SOC blocks per corner, per element
 - `ClarabelProblem` builder: assemble `P, q, A_eq, b_eq, cones`
-- First full solve: 2×2 m isotropic simply-supported square slab, uniform unit load
-- Verify: `λ = 24·m_p / L² = 6.0 kN/m²` for `m_p = 1 kNm/m`, `L = 2 m`
 
 ### Phase 4 — Loads and Boundary Conditions (`plato-api`)
 - `AreaLoad` consistent nodal distribution (uniform)
