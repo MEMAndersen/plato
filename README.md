@@ -50,17 +50,24 @@ cargo build --release
 # run all tests across the workspace
 cargo test
 
-# run tests for a specific crate
-cargo test -p plato-core
-cargo test -p plato-mesh
-cargo test -p plato-api
+# run tests for a specific crate (cleaner output — less Clarabel noise)
+cargo test -p plato-core   # 22 unit tests: elements, yield criterion, DOF map, assembly
+cargo test -p plato-mesh   # mesh generation tests
+cargo test -p plato-api    # end-to-end integration tests
 
 # run a single test by name (partial match)
 cargo test johansen
 
-# show stdout from tests
-cargo test -- --nocapture
+# suppress captured stdout (Clarabel solver prints to stderr; that always shows)
+cargo test -q
 ```
+
+> **Note:** The Clarabel solver prints diagnostic output to stderr during every solve,
+> which makes the workspace test output noisy. Run per-crate to get a clean view.
+
+> **Known failures (Phase 4 WIP):** Two integration tests in `plato-api` currently fail —
+> `simply_supported_square` and `simply_supported_beam_8m`. This is a known equilibrium
+> formulation issue under active investigation. All unit tests in `plato-core` pass.
 
 ---
 
