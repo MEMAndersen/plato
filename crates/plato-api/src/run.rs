@@ -107,12 +107,7 @@ pub fn run_analysis_with_progress(
         let n_nonzero = q_ext.iter().filter(|&&v| v.abs() > 1e-30).count();
         eprintln!(
             "[diag] n_free_w={} n_rot={} n_dof={} | q_ext: sum={:.4e} max={:.4e} n_nonzero={}",
-            dof_map.n_free_w,
-            dof_map.n_rot,
-            n_dof,
-            q_sum,
-            q_max,
-            n_nonzero
+            dof_map.n_free_w, dof_map.n_rot, n_dof, q_sum, q_max, n_nonzero
         );
     }
 
@@ -435,16 +430,22 @@ mod tests {
         );
         let lf = result.load_factor;
         println!("simply_supported_square λ = {lf:.4}  (exact = 24.0)");
-        let util_max = result.element_moments.iter()
+        let util_max = result
+            .element_moments
+            .iter()
             .flat_map(|em| em.yield_utilisation.iter().copied())
             .fold(0.0f64, f64::max);
         let util_mean = {
-            let v: Vec<f64> = result.element_moments.iter()
+            let v: Vec<f64> = result
+                .element_moments
+                .iter()
                 .flat_map(|em| em.yield_utilisation.iter().copied())
                 .collect();
             v.iter().sum::<f64>() / v.len() as f64
         };
-        let m_max = result.element_moments.iter()
+        let m_max = result
+            .element_moments
+            .iter()
             .flat_map(|em| em.corner_moments.iter().flat_map(|m| m.iter().copied()))
             .fold(0.0f64, |a, b| a.max(b.abs()));
         println!(

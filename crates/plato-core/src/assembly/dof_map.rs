@@ -349,8 +349,16 @@ mod tests {
         let clamped: HashSet<usize> = [4].into_iter().collect();
         let dm = DofMap::new(&all_nodes, &pinned, &clamped, &mesh);
 
-        assert_eq!(dm.theta_row_opt(0, 2, 0), None, "clamped side sub=0 must be None");
-        assert_eq!(dm.theta_row_opt(0, 2, 1), None, "clamped side sub=1 must be None");
+        assert_eq!(
+            dm.theta_row_opt(0, 2, 0),
+            None,
+            "clamped side sub=0 must be None"
+        );
+        assert_eq!(
+            dm.theta_row_opt(0, 2, 1),
+            None,
+            "clamped side sub=1 must be None"
+        );
 
         assert_eq!(
             dm.total_rows(),

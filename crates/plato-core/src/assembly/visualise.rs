@@ -128,7 +128,15 @@ fn lerp(a: [f64; 2], b: [f64; 2], t: f64) -> [f64; 2] {
 }
 
 /// Filled triangle arrowhead.  `(ux, uy)` is the unit direction the tip points toward.
-fn draw_arrowhead(svg: &mut String, tip_x: f64, tip_y: f64, ux: f64, uy: f64, size: f64, color: &str) {
+fn draw_arrowhead(
+    svg: &mut String,
+    tip_x: f64,
+    tip_y: f64,
+    ux: f64,
+    uy: f64,
+    size: f64,
+    color: &str,
+) {
     let base_x = tip_x - ux * size;
     let base_y = tip_y - uy * size;
     let hw = size * 0.5; // half-width of base
@@ -203,8 +211,7 @@ pub(super) fn render_dof_map_svg(mesh: &MeshModel, dof_map: &DofMap) -> String {
     // Green = CCW (positive signed area in world coords).
     // Orange = CW (negative signed area).
     for elem in &mesh.elements {
-        let corners: [[f64; 2]; 3] =
-            std::array::from_fn(|i| mesh.nodes[elem.corners[i]]);
+        let corners: [[f64; 2]; 3] = std::array::from_fn(|i| mesh.nodes[elem.corners[i]]);
         let cx = (corners[0][0] + corners[1][0] + corners[2][0]) / 3.0;
         let cy = (corners[0][1] + corners[1][1] + corners[2][1]) / 3.0;
         let centroid_px = tr.px(cx, cy);
@@ -212,7 +219,11 @@ pub(super) fn render_dof_map_svg(mesh: &MeshModel, dof_map: &DofMap) -> String {
         let signed_area = 0.5
             * ((corners[1][0] - corners[0][0]) * (corners[2][1] - corners[0][1])
                 - (corners[2][0] - corners[0][0]) * (corners[1][1] - corners[0][1]));
-        let arrow_color = if signed_area > 0.0 { "#27ae60" } else { "#e67e22" };
+        let arrow_color = if signed_area > 0.0 {
+            "#27ae60"
+        } else {
+            "#e67e22"
+        };
 
         for i in 0..3usize {
             let a = corners[i];
@@ -351,9 +362,9 @@ pub(super) fn render_dof_map_svg(mesh: &MeshModel, dof_map: &DofMap) -> String {
 
     for (symbol, color, desc) in [
         ("X", "#1a73e8", "w-DOF (free)"),
-        ("X", "#999",    "w-DOF (pinned)"),
+        ("X", "#999", "w-DOF (pinned)"),
         ("O", "#c0392b", "θ-DOF (active)"),
-        ("O", "#bbb",    "θ-DOF (clamped)"),
+        ("O", "#bbb", "θ-DOF (clamped)"),
         ("A", "#27ae60", "CCW element (pos area)"),
         ("A", "#e67e22", "CW element (neg area)"),
     ] {
@@ -362,7 +373,7 @@ pub(super) fn render_dof_map_svg(mesh: &MeshModel, dof_map: &DofMap) -> String {
         match symbol {
             "X" => draw_x(&mut svg, mx, my, 5.0, color),
             "O" => draw_circle(&mut svg, mx, my, 4.5, color),
-            _   => draw_arrowhead(&mut svg, mx + 4.0, my, 1.0, 0.0, 7.0, color),
+            _ => draw_arrowhead(&mut svg, mx + 4.0, my, 1.0, 0.0, 7.0, color),
         }
         svg.push_str(&format!(
             "<text x=\"{:.0}\" y=\"{:.1}\" font-size=\"10\" font-family=\"sans-serif\" \

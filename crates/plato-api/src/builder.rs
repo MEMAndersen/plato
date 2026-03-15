@@ -2,7 +2,9 @@ use plato_mesh::geometry::{Polygon2D, SharedEdgeDeclaration};
 use plato_mesh::model::MeshConfig;
 
 use crate::loads::{Load, MeshDensity};
-use crate::model::{AnalysisError, AnalysisModel, Panel, RCSlabMaterial, SolveResult, SolverConfig};
+use crate::model::{
+    AnalysisError, AnalysisModel, Panel, RCSlabMaterial, SolveResult, SolverConfig,
+};
 use crate::run::{ProgressCallback, run_analysis_with_progress};
 use crate::supports::Support;
 use crate::units::UnitSystem;
@@ -149,7 +151,10 @@ impl ModelBuilder {
     }
 
     /// Build, mesh, and solve with a progress callback.
-    pub fn solve_with_progress(self, p: &dyn ProgressCallback) -> Result<SolveResult, AnalysisError> {
+    pub fn solve_with_progress(
+        self,
+        p: &dyn ProgressCallback,
+    ) -> Result<SolveResult, AnalysisError> {
         let model = self.build()?;
         run_analysis_with_progress(&model, p)
     }
@@ -187,8 +192,13 @@ fn validate_builder(b: &ModelBuilder) -> Result<(), AnalysisError> {
     let has_variable_load = b.loads.iter().any(|l| {
         matches!(
             l,
-            Load::AreaLoad { load_case: crate::loads::LoadCase::Variable, .. }
-                | Load::LineLoad { load_case: crate::loads::LoadCase::Variable, .. }
+            Load::AreaLoad {
+                load_case: crate::loads::LoadCase::Variable,
+                ..
+            } | Load::LineLoad {
+                load_case: crate::loads::LoadCase::Variable,
+                ..
+            }
         )
     });
     if !has_variable_load {
