@@ -40,18 +40,16 @@ impl VarLayout {
 // ── ClarabelProblem builder ───────────────────────────────────────────────────
 
 /// Inputs to one limit-analysis SOCP solve.
-///
-/// The caller is responsible for supplying the already-assembled equilibrium
-/// matrix `bt` (shape `n_dof × 9·n_e`) and the reference load vector `f_ref`
-/// (length `n_dof`). Phase 4 (`plato-api`) will compute these from an
-/// `AnalysisModel`; for now the test below constructs them inline.
 pub struct ClarabelProblem<'a> {
     /// Global B^T matrix, shape n_dof × 9·n_e (CSC, column-major).
     pub bt: &'a CscMatrix<f64>,
-    /// Reference load vector, length n_dof.
-    pub f_ref: &'a [f64],
-    /// Johansen yield criterion (orthotropic, general).
-    pub criterion: &'a JohansenCriterion,
+    /// Variable load vector (scaled by λ), length n_dof.
+    pub q_ext: &'a [f64],
+    /// Permanent load vector (constant RHS), length n_dof or empty (treated as zero).
+    pub q_dead: &'a [f64],
+    /// Johansen yield criteria — one reference per element.
+    /// Elements sharing a panel material point to the same criterion object.
+    pub criteria: &'a [&'a JohansenCriterion],
     /// Number of elements.
     pub n_e: usize,
 }
@@ -60,7 +58,7 @@ impl ClarabelProblem<'_> {
     /// Assemble and solve the Clarabel SOCP. Returns the plastic load factor λ.
     pub fn solve(&self) -> SolveResult {
         let n_e = self.n_e;
-        let n_dof = self.f_ref.len();
+        let n_dof = self.q_ext.len();
 
         let layout = VarLayout { n_e };
         let n_vars = layout.n_vars();
@@ -80,7 +78,11 @@ impl ClarabelProblem<'_> {
         let mut t_cols: Vec<usize> = Vec::with_capacity(cap);
         let mut t_vals: Vec<f64> = Vec::with_capacity(cap);
 
+        // Initialise b; set dead-load values at equilibrium rows.
         let mut b = vec![0.0f64; n_rows];
+        for (r, &dval) in self.q_dead.iter().enumerate() {
+            b[r] = dval;
+        }
 
         macro_rules! push {
             ($r:expr, $c:expr, $v:expr) => {{
@@ -91,8 +93,8 @@ impl ClarabelProblem<'_> {
         }
 
         // ── 1. Equilibrium rows (ZeroConeT, rows 0..n_dof) ───────────────
-        // A[r, 0] = -f_ref[r]  (λ column)
-        for (r, &fval) in self.f_ref.iter().enumerate() {
+        // A[r, 0] = -q_ext[r]  (λ column)
+        for (r, &fval) in self.q_ext.iter().enumerate() {
             if fval.abs() > 0.0 {
                 push!(r, 0, -fval);
             }
@@ -110,7 +112,7 @@ impl ClarabelProblem<'_> {
         // Delegated to JohansenCriterion::push_corner_blocks() per corner.
         for e in 0..n_e {
             for k in 0..3usize {
-                self.criterion.push_corner_blocks(
+                self.criteria[e].push_corner_blocks(
                     &mut t_rows,
                     &mut t_cols,
                     &mut t_vals,
@@ -178,7 +180,7 @@ impl ClarabelProblem<'_> {
                     }
                     let yield_utilisation = std::array::from_fn(|k| {
                         let [mx, my, mxy] = corner_moments[k];
-                        self.criterion.yield_utilisation(mx, my, mxy)
+                        self.criteria[e].yield_utilisation(mx, my, mxy)
                     });
                     ElementMoments {
                         element_id: e,
@@ -191,10 +193,81 @@ impl ClarabelProblem<'_> {
             Vec::new()
         };
 
+        let duality_gap = (sol.obj_val - sol.obj_val_dual).abs();
+
+        // ── Post-solve equilibrium diagnostic (test builds only) ──────────
+        #[cfg(test)]
+        if matches!(status, SolveStatus::Solved | SolveStatus::AlmostSolved) {
+            let lf = load_factor;
+            let n_dof = self.q_ext.len();
+
+            // Compute B^T · m  at equilibrium rows
+            let mut bt_m = vec![0.0f64; n_dof];
+            for col_j in 0..self.bt.n {
+                let m_val = sol.x[1 + col_j];
+                for ptr in self.bt.colptr[col_j]..self.bt.colptr[col_j + 1] {
+                    let row_r = self.bt.rowval[ptr];
+                    if row_r < n_dof {
+                        bt_m[row_r] += self.bt.nzval[ptr] * m_val;
+                    }
+                }
+            }
+            // Residual: B^T·m − λ·q_ext − q_dead
+            let mut max_res = 0.0f64;
+            let mut sum_res = 0.0f64;
+            let mut n_eq = 0usize;
+            for r in 0..n_dof {
+                let q_val = self.q_ext[r];
+                let d_val = self.q_dead.get(r).copied().unwrap_or(0.0);
+                let res = (bt_m[r] - lf * q_val - d_val).abs();
+                max_res = max_res.max(res);
+                sum_res += res;
+                n_eq += 1;
+            }
+
+            // Yield utilisation stats across all element corners
+            let utils: Vec<f64> = element_moments
+                .iter()
+                .flat_map(|em| em.yield_utilisation.iter().copied())
+                .collect();
+            let util_max = utils.iter().cloned().fold(0.0f64, f64::max);
+            let util_mean = utils.iter().sum::<f64>() / utils.len() as f64;
+
+            // Moment magnitude stats
+            let m_max = element_moments
+                .iter()
+                .flat_map(|em| em.corner_moments.iter())
+                .flat_map(|m| m.iter().copied())
+                .fold(0.0f64, |a, b| a.max(b.abs()));
+            let m_mean = {
+                let vals: Vec<f64> = element_moments
+                    .iter()
+                    .flat_map(|em| em.corner_moments.iter())
+                    .flat_map(|m| m.iter().copied())
+                    .collect();
+                vals.iter().sum::<f64>() / vals.len() as f64
+            };
+
+            // q_ext stats
+            let q_max = self.q_ext.iter().cloned().fold(0.0f64, f64::max);
+            let q_sum: f64 = self.q_ext.iter().sum();
+
+            eprintln!(
+                "[eq-diag] λ={lf:.4} n_dof={n_eq} n_e={n_e} \
+                 | eq_res max={max_res:.4e} mean={:.4e} \
+                 | yield_util max={util_max:.4} mean={util_mean:.4} \
+                 | |m| max={m_max:.4e} mean={m_mean:.4e} \
+                 | q_ext max={q_max:.4e} sum={q_sum:.4e}",
+                sum_res / n_eq as f64,
+            );
+        }
+
         SolveResult {
             status,
             load_factor,
             element_moments,
+            solver_iterations: sol.iterations,
+            duality_gap,
         }
     }
 }
@@ -271,7 +344,7 @@ mod tests {
             .collect();
 
         let all_nodes = collect_all_displacement_nodes(&mesh);
-        let dof_map = DofMap::new(&all_nodes, &pinned, &mesh);
+        let dof_map = DofMap::new(&all_nodes, &pinned, &HashSet::new(), &mesh);
         let n_dof = dof_map.total_rows();
         let bt = assemble_bt(&mesh, &dof_map);
 
@@ -292,10 +365,12 @@ mod tests {
         }
 
         let criterion = JohansenCriterion::isotropic(1.0);
+        let criteria = [&criterion; 2];
         let problem = ClarabelProblem {
             bt: &bt,
-            f_ref: &f_ref,
-            criterion: &criterion,
+            q_ext: &f_ref,
+            q_dead: &[],
+            criteria: &criteria,
             n_e: 2,
         };
         let result = problem.solve();

@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 /// Status returned by the Clarabel solver.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SolveStatus {
     /// Optimal solution found.
     Solved,
@@ -12,7 +14,7 @@ pub enum SolveStatus {
 }
 
 /// Moment field and yield utilisation for one triangular element.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementMoments {
     pub element_id: usize,
     /// Moments [mx, my, mxy] at each of the 3 corners (corner_k = 0..3).
@@ -28,4 +30,8 @@ pub struct SolveResult {
     /// Plastic load factor λ (multiplier on the applied variable load).
     pub load_factor: f64,
     pub element_moments: Vec<ElementMoments>,
+    /// Number of solver iterations taken.
+    pub solver_iterations: u32,
+    /// Final duality gap |obj_primal - obj_dual|.
+    pub duality_gap: f64,
 }

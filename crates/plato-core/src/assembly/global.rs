@@ -44,12 +44,12 @@ pub fn assemble_bt(mesh: &MeshModel, dof_map: &DofMap) -> CscMatrix<f64> {
             dof_map.w_row(elem.midpoints[0]),
             dof_map.w_row(elem.midpoints[1]),
             dof_map.w_row(elem.midpoints[2]),
-            Some(dof_map.theta_row(e, 0, 0)), // θ0a
-            Some(dof_map.theta_row(e, 0, 1)), // θ0b
-            Some(dof_map.theta_row(e, 1, 0)), // θ1a
-            Some(dof_map.theta_row(e, 1, 1)), // θ1b
-            Some(dof_map.theta_row(e, 2, 0)), // θ2a
-            Some(dof_map.theta_row(e, 2, 1)), // θ2b
+            dof_map.theta_row_opt(e, 0, 0), // θ0a
+            dof_map.theta_row_opt(e, 0, 1), // θ0b
+            dof_map.theta_row_opt(e, 1, 0), // θ1a
+            dof_map.theta_row_opt(e, 1, 1), // θ1b
+            dof_map.theta_row_opt(e, 2, 0), // θ2a
+            dof_map.theta_row_opt(e, 2, 1), // θ2b
         ];
 
         for local_row in 0..12usize {
@@ -98,7 +98,7 @@ mod tests {
     fn assembly_shape() {
         let mesh = simple_mesh();
         let all_nodes = collect_all_displacement_nodes(&mesh);
-        let dm = DofMap::new(&all_nodes, &HashSet::new(), &mesh);
+        let dm = DofMap::new(&all_nodes, &HashSet::new(), &HashSet::new(), &mesh);
         let bt = assemble_bt(&mesh, &dm);
 
         assert_eq!(bt.m, dm.total_rows(), "wrong row count");
@@ -109,7 +109,7 @@ mod tests {
     fn assembly_sparsity() {
         let mesh = simple_mesh();
         let all_nodes = collect_all_displacement_nodes(&mesh);
-        let dm = DofMap::new(&all_nodes, &HashSet::new(), &mesh);
+        let dm = DofMap::new(&all_nodes, &HashSet::new(), &HashSet::new(), &mesh);
         let bt = assemble_bt(&mesh, &dm);
 
         // Each column belongs to one element; at most 12 active rows before
@@ -184,7 +184,7 @@ mod tests {
 
         assert_eq!(pinned.len(), 8, "8 boundary nodes should be pinned");
 
-        let dm = DofMap::new(&all_nodes, &pinned, &mesh);
+        let dm = DofMap::new(&all_nodes, &pinned, &HashSet::new(), &mesh);
         assert_eq!(dm.n_free_w, 1, "only the shared interior midpoint is free");
 
         let bt = assemble_bt(&mesh, &dm);
